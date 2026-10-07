@@ -1,0 +1,9 @@
+{
+  "name": "TruckControl Enterprise",
+  "short_name": "TruckControl",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "icons": []
+}
