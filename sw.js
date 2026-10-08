@@ -1,4 +1,4 @@
-const CACHE = 'truckcontrol-enterprise-v3';
+const CACHE = 'truckcontrol-enterprise-v4';
 const ASSETS = [
   './',
   './index.html',
