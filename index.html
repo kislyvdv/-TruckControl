@@ -7,15 +7,15 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>TruckControl Enterprise</title>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827;background:#f3f4f6}
-*{box-sizing:border-box}body{margin:0;padding-bottom:80px}header{position:sticky;top:0;z-index:4;background:#111827;color:white;padding:16px}.brand{font-size:21px;font-weight:800}.sub{font-size:12px;opacity:.75}
-main{padding:12px;max-width:900px;margin:auto}.tabs{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #ddd;display:flex;z-index:5}.tabs button{flex:1;border:0;background:white;padding:12px 4px;font-size:11px}.tabs button.active{font-weight:800;background:#e5e7eb}
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#10233f;background:#eef5f7;--primary:#0f4c5c;--primary2:#136f7d;--accent:#f59e0b;--soft:#e7f1f3}
+*{box-sizing:border-box}body{margin:0;padding-bottom:80px}header{position:sticky;top:0;z-index:4;background:linear-gradient(135deg,#0f4c5c,#173b57);color:white;padding:16px}.brand{font-size:21px;font-weight:800}.sub{font-size:12px;opacity:.75}
+main{padding:12px;max-width:900px;margin:auto}.tabs{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #ddd;display:flex;z-index:5}.tabs button{flex:1;border:0;background:white;padding:12px 4px;font-size:11px}.tabs button.active{font-weight:800;background:#d9eef1;color:#0f4c5c}
 .card{background:white;border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 1px 5px #0001}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 h2,h3{margin:4px 0 10px}.metric{font-size:24px;font-weight:800}.muted{color:#6b7280;font-size:12px}
 input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;background:white;margin:4px 0 8px}textarea{min-height:70px}
-button.primary,button.action{border:0;border-radius:10px;padding:10px 12px;background:#111827;color:white}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.danger{background:#b91c1c!important}.ok{background:#166534!important}.small{font-size:12px}
+button.primary,button.action{border:0;border-radius:12px;padding:10px 12px;background:var(--primary);color:white;box-shadow:0 2px 5px #0f4c5c22}.fuelBtn{border:2px solid transparent;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer}.fuelBtn.diesel{background:#e3f0f6;color:#155e75}.fuelBtn.adblue{background:#e0f2fe;color:#075985}.fuelBtn.active{border-color:var(--accent);box-shadow:0 0 0 2px #f59e0b33}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.danger{background:#b91c1c!important}.ok{background:#166534!important}.small{font-size:12px}
 .item{border-top:1px solid #eee;padding:10px 0}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e5e7eb;font-size:11px}.hidden{display:none}
-.notice{padding:10px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;font-size:12px}
+.notice{padding:10px;border-radius:10px;background:#fff8e7;border:1px solid #f6d48a;font-size:12px}.tripPanel{border-left:4px solid var(--primary2);padding-left:10px}.sublist{margin-top:7px;padding:8px;background:#f7fafb;border-radius:10px}.expenseCash{background:#ecfdf5}.expenseCard{background:#eff6ff}
 
 .modal{position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:12px}
 .modalbox{background:white;border-radius:18px;padding:16px;width:min(520px,100%);box-shadow:0 10px 40px #0005}
@@ -29,18 +29,35 @@ button.primary,button.action{border:0;border-radius:10px;padding:10px 12px;backg
 <header><div class="brand">🚚 TruckControl Enterprise</div><div class="sub" id="companyLabel">Локальный режим • офлайн</div></header>
 <main id="app"></main>
 <nav class="tabs">
-<button data-tab="home">Главная</button><button data-tab="trips">Рейсы</button><button data-tab="fleet">Автопарк</button><button data-tab="fuel">Топливо</button><button data-tab="more">Ещё</button>
+<button data-tab="home">Главная</button><button data-tab="trips">Рейсы</button><button data-tab="expenses">Расходы</button><button data-tab="fleet">Автопарк</button><button data-tab="fuel">Топливо</button><button data-tab="more">Ещё</button>
 </nav>
 <script>
 const KEY='truckcontrol_enterprise_v1';
 let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
 company:{name:'Моя транспортная компания',server:''},
 user:{name:'Пользователь',role:'dispatcher'},
-trips:[],drivers:[],trucks:[],trailers:[],fuel:[],route:[],docs:[],gps:[]
+trips:[],drivers:[],trucks:[],trailers:[],fuel:[],expenses:[],route:[],docs:[],gps:[]
 };
-db.trips ||= []; db.drivers ||= []; db.trucks ||= []; db.trailers ||= []; db.fuel ||= []; db.route ||= []; db.docs ||= []; db.gps ||= [];
+db.trips ||= []; db.drivers ||= []; db.trucks ||= []; db.trailers ||= []; db.fuel ||= []; db.expenses ||= []; db.route ||= []; db.docs ||= []; db.gps ||= [];
 db.fuel.forEach(x=>{if(!x.type)x.type='diesel'});
-const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+let syncTimer=null;
+const localSave=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const save=()=>{localSave(); if(db.company.server) queueServerSave()};
+const currencies=['KZT','USD','EUR','RUB','CNY','BYN'];
+const currencyOptions=(selected='')=>currencies.map(c=>`<option ${selected===c?'selected':''}>${c}</option>`).join('');
+const paymentLabel=p=>p==='card'?'Карта':'Наличные';
+const tripDocs=t=>db.docs.filter(d=>d.tripId===t.id || (!d.tripId && d.trip===t.no));
+const tripExpenses=t=>db.expenses.filter(e=>e.tripId===t.id || (!e.tripId && e.trip===t.no));
+const tripFuel=t=>db.fuel.filter(f=>f.tripId===t.id || (!f.tripId && f.trip===t.no));
+const fuelLitersByType=type=>db.fuel.filter(x=>x.type===type).reduce((a,x)=>a+Number(x.liters||0),0);
+const fuelTripForDate=date=>{if(!date||!db.trips.length)return null;const day=String(date).slice(0,10);const same=db.trips.filter(t=>t.date===day);if(same.length)return same[same.length-1];const dated=db.trips.filter(t=>t.date&&t.date<=day).sort((a,b)=>String(b.date).localeCompare(String(a.date)));return dated[0]||db.trips.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')))[0]||null};
+function autoFuelTrip(){const d=val('f_date'),t=fuelTripForDate(d),s=document.getElementById('f_trip');if(s&&t){s.value=t.id;const hint=document.getElementById('f_trip_hint');if(hint)hint.textContent=`Автоматически выбран рейс по дате: ${t.no}`}}
+async function apiFetch(path,opts={}){const base=(db.company.server||'').replace(/\/$/,'');if(!base)throw new Error('URL сервера не задан');const headers={'Content-Type':'application/json',...(db.company.apiKey?{'X-API-Key':db.company.apiKey}:{})};const r=await fetch(base+path,{...opts,headers:{...headers,...(opts.headers||{})}});if(!r.ok)throw new Error((await r.text())||('HTTP '+r.status));return r.json()}
+function queueServerSave(){clearTimeout(syncTimer);syncTimer=setTimeout(pushServer,500)}
+async function pushServer(){if(!db.company.server)return;try{await apiFetch('/api/state',{method:'PUT',body:JSON.stringify(db)});setSyncStatus('Синхронизировано с сервером')}catch(e){setSyncStatus('Локально • сервер недоступен')}}
+async function loadServer(){if(!db.company.server){alert('Сначала укажите URL сервера');return}try{const remote=await apiFetch('/api/state');db=remote;db.trips ||= [];db.drivers ||= [];db.trucks ||= [];db.trailers ||= [];db.fuel ||= [];db.expenses ||= [];db.route ||= [];db.docs ||= [];db.gps ||= [];localSave();setSyncStatus('Данные загружены с сервера');render('home')}catch(e){alert('Не удалось загрузить данные: '+e.message)}}
+function setSyncStatus(t){const el=document.getElementById('syncStatus');if(el)el.textContent=t}
+
 const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const val=n=>document.getElementById(n)?.value?.trim()||'';
@@ -55,16 +72,27 @@ function render(tab='home'){
  let a=document.getElementById('app');
  if(tab==='home') a.innerHTML=home();
  if(tab==='trips') a.innerHTML=trips();
+ if(tab==='expenses') a.innerHTML=expenses();
  if(tab==='fleet') a.innerHTML=fleet();
  if(tab==='fuel') a.innerHTML=fuel();
  if(tab==='more') a.innerHTML=more();
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
 }
 function home(){return `<h2>Панель управления</h2>
-<div class="grid3"><div class="card"><div class="muted">Рейсы</div><div class="metric">${db.trips.length}</div></div><div class="card"><div class="muted">Километры</div><div class="metric">${kmTotal()}</div></div><div class="card"><div class="muted">Топливо, л</div><div class="metric">${liters().toFixed(1)}</div></div></div>
-<div class="card"><h3>Последние рейсы</h3>${db.trips.slice(-5).reverse().map(t=>`<div class="item"><b>${esc(t.no)}</b> <span class="badge">${esc(t.status)}</span><br>${esc(t.from)} → ${esc(t.to)}<br><span class="muted">Груз: ${esc(t.weight)} т • ${esc(t.driver||'водитель не назначен')}</span></div>`).join('')||'<div class="muted">Рейсов пока нет.</div>'}</div>
-<div class="card"><div class="notice">Работа без интернета включена. Данные сохраняются на этом iPhone. Для общей базы компании требуется сервер.</div></div>`}
-
+<div class="grid3">
+<div class="card"><div class="muted">Рейсы</div><div class="metric">${db.trips.length}</div></div>
+<div class="card"><div class="muted">Дизель, л</div><div class="metric">${fuelLitersByType('diesel').toFixed(1)}</div></div>
+<div class="card"><div class="muted">AdBlue, л</div><div class="metric">${fuelLitersByType('adblue').toFixed(1)}</div></div>
+</div>
+<div class="card"><h3>Рейсы, документы и расходы</h3>
+${db.trips.slice().reverse().map(t=>{let docs=tripDocs(t),ex=tripExpenses(t),fu=tripFuel(t);return `<div class="item tripPanel">
+<b>${esc(t.no)}</b> <span class="badge">${esc(t.status)}</span><br>${esc(t.from)} → ${esc(t.to)}<br>
+<span class="muted">Дата: ${esc(t.date)} • ${esc(t.driver||'водитель не назначен')} • ${esc(t.truck||'тягач не назначен')}</span>
+<div class="sublist"><b>Документы (${docs.length})</b>${docs.map(d=>`<div class="small">📄 ${esc(d.type)}: ${esc(d.name)}</div>`).join('')||'<div class="muted">Нет документов</div>'}</div>
+<div class="sublist"><b>Расходы (${ex.length})</b>${ex.map(e=>`<div class="small ${e.payment==='card'?'expenseCard':'expenseCash'}">${esc(e.category||'Расход')} • ${esc(e.amount)} ${esc(e.currency)} • ${paymentLabel(e.payment)}${e.note?' • '+esc(e.note):''}</div>`).join('')||'<div class="muted">Нет денежных расходов</div>'}</div>
+<div class="sublist"><b>Топливо (${fu.length})</b>${fu.map(f=>`<div class="small">${fuelLabel(f.type)} • ${esc(f.liters)} л • ${esc(f.cost)} ${esc(f.currency)}</div>`).join('')||'<div class="muted">Нет заправок</div>'}</div>
+</div>`}).join('')||'<div class="muted">Рейсов пока нет.</div>'}</div>
+<div class="card"><div class="notice" id="syncStatus">${db.company.server?'Сервер: '+esc(db.company.server):'Сервер не настроен. Локальный режим.'}</div></div>`}
 function tripForm(t={},editing=false){
  return `<div class="grid">
 <label>Номер<input id="t_no" value="${esc(t.no)}" placeholder="TR-2026-001"></label><label>Дата<input id="t_date" type="date" value="${esc(t.date)}"></label>
@@ -78,8 +106,9 @@ function tripForm(t={},editing=false){
 }
 function trips(){let edit=db.trips.find(x=>x.id===window.editingTripId);return `<h2>Рейсы</h2>
 <div class="card"><h3>${edit?'Редактирование рейса':'Новый рейс'}</h3>${tripForm(edit||{},!!edit)}</div>
-<div class="card"><h3>Список</h3>${db.trips.slice().reverse().map(t=>`<div class="item"><b>${esc(t.no)}</b> <span class="badge">${esc(t.status)}</span><br>${esc(t.from)} → ${esc(t.to)} • ${esc(t.weight)} т<br>Одометр: ${esc(t.startKm)} → ${esc(t.endKm)} км<br>Водитель: ${esc(t.driver||'—')} • Тягач: ${esc(t.truck||'—')}<br><button class="action small" onclick="editTrip('${t.id}')">Редактировать</button> <button class="action small ok" onclick="docFor('${t.id}')">Добавить документ</button> <button class="danger action small" onclick="del('trips','${t.id}')">Удалить</button></div>`).join('')||'<div class="muted">Нет данных.</div>'}</div>`}
-
+<div class="card"><h3>Список</h3>${db.trips.slice().reverse().map(t=>{let docs=tripDocs(t),ex=tripExpenses(t);return `<div class="item"><b>${esc(t.no)}</b> <span class="badge">${esc(t.status)}</span><br>${esc(t.from)} → ${esc(t.to)} • ${esc(t.weight)} т<br>Одометр: ${esc(t.startKm)} → ${esc(t.endKm)} км<br>Водитель: ${esc(t.driver||'—')} • Тягач: ${esc(t.truck||'—')}<br>
+<span class="muted">Документов: ${docs.length} • Денежных расходов: ${ex.length}</span><br>
+<button class="action small" onclick="editTrip('${t.id}')">Редактировать</button> <button class="action small ok" onclick="docFor('${t.id}')">Добавить документ</button> <button class="action small" onclick="newExpenseFor('${t.id}')">Добавить расход</button> <button class="danger action small" onclick="del('trips','${t.id}')">Удалить</button></div>`}).join('')||'<div class="muted">Нет данных.</div>'}</div>`}
 function fleet(){return `<h2>Автопарк и сотрудники</h2>
 <div class="card"><h3>Водитель</h3><input id="d_name" placeholder="ФИО"><input id="d_phone" placeholder="Телефон"><button class="primary" onclick="addDriver()">Добавить</button></div>
 <div class="card"><h3>Тягач</h3><input id="tr_plate" placeholder="Госномер"><input id="tr_model" placeholder="Марка/модель"><button class="primary" onclick="addTruck()">Добавить</button></div>
@@ -88,22 +117,38 @@ function fleet(){return `<h2>Автопарк и сотрудники</h2>
 <b>Тягачи</b>${db.trucks.map(x=>`<div class="item">${esc(x.plate)} • ${esc(x.model)} <button class="action small" onclick="editTruck('${x.id}')">Редактировать</button> <button class="danger small action" onclick="del('trucks','${x.id}')">×</button></div>`).join('')||'<div class="muted">Нет</div>'}
 <b>Прицепы</b>${db.trailers.map(x=>`<div class="item">${esc(x.plate)} • ${esc(x.type)} <button class="action small" onclick="editTrailer('${x.id}')">Редактировать</button> <button class="danger small action" onclick="del('trailers','${x.id}')">×</button></div>`).join('')||'<div class="muted">Нет</div>'}</div>`}
 
-function fuel(){let edit=db.fuel.find(x=>x.id===window.editingFuelId);return `<h2>Топливо и расходы рейсов</h2>
-<div class="card"><h3>${edit?'Редактирование расхода':'Добавить расход'}</h3><div class="grid">
-<label>Тип<select id="f_type"><option value="diesel" ${(!edit||edit.type==='diesel')?'selected':''}>Дизель</option><option value="adblue" ${edit?.type==='adblue'?'selected':''}>AdBlue</option></select></label>
-<label>Дата<input id="f_date" type="datetime-local" value="${esc(edit?.date||now())}"></label><label>Литры<input id="f_liters" type="number" step=".01" value="${esc(edit?.liters)}"></label>
-<label>Стоимость<input id="f_cost" type="number" step=".01" value="${esc(edit?.cost)}"></label><label>Валюта<select id="f_cur">${['KZT','USD','EUR','RUB','CNY'].map(c=>`<option ${edit?.currency===c?'selected':''}>${c}</option>`).join('')}</select></label>
-<label>АЗС<input id="f_station" value="${esc(edit?.station)}"></label><label>Рейс<select id="f_trip"><option value="">Без рейса</option>${db.trips.map(t=>`<option value="${esc(t.id)}" ${(edit?.tripId===t.id || (!edit?.tripId&&edit?.trip===t.no))?'selected':''}>${esc(t.no)} • ${esc(t.from)} → ${esc(t.to)}</option>`).join('')}</select></label></div>
-<div class="row"><button class="primary" onclick="${edit?`updateFuel('${edit.id}')`:'addFuel()'}">${edit?'Сохранить изменения':'Добавить расход'}</button>${edit?`<button class="action" onclick="cancelFuelEdit()">Отмена</button>`:''}</div></div>
-<div class="card"><h3>Журнал</h3>${db.fuel.slice().reverse().map(x=>{let tr=db.trips.find(t=>t.id===x.tripId);return `<div class="item"><b>${fuelLabel(x.type)}</b> • ${esc(x.date)} • <b>${esc(x.liters)} л</b> • ${esc(x.cost)} ${esc(x.currency)}<br>${esc(x.station)} • рейс ${esc(tr?.no||x.trip||'—')}<br><button class="action small" onclick="editFuel('${x.id}')">Редактировать</button> <button class="danger action small" onclick="del('fuel','${x.id}')">Удалить</button></div>`}).join('')||'<div class="muted">Нет расходов.</div>'}</div>`}
+function fuel(){let edit=db.fuel.find(x=>x.id===window.editingFuelId);let currentType=edit?.type||'diesel';let auto=fuelTripForDate(edit?.date||now());return `<h2>Топливо</h2>
+<div class="card"><h3>${edit?'Редактирование заправки':'Добавить заправку'}</h3>
+<div class="grid3"><button type="button" class="fuelBtn diesel ${currentType==='diesel'?'active':''}" onclick="setFuelType('diesel')">⛽ Дизель</button><button type="button" class="fuelBtn adblue ${currentType==='adblue'?'active':''}" onclick="setFuelType('adblue')">💧 AdBlue</button><div class="notice">Дизель и AdBlue считаются отдельно</div></div>
+<input id="f_type" type="hidden" value="${currentType}">
+<div class="grid">
+<label>Дата<input id="f_date" type="datetime-local" value="${esc(edit?.date||now())}" onchange="autoFuelTrip()"></label>
+<label>Литры<input id="f_liters" type="number" step=".01" value="${esc(edit?.liters)}"></label>
+<label>Стоимость<input id="f_cost" type="number" step=".01" value="${esc(edit?.cost)}"></label>
+<label>Валюта<select id="f_cur">${currencyOptions(edit?.currency||'KZT')}</select></label>
+<label>АЗС<input id="f_station" value="${esc(edit?.station)}"></label>
+<label>Рейс<select id="f_trip"><option value="">Без рейса</option>${db.trips.map(t=>`<option value="${esc(t.id)}" ${(edit?.tripId===t.id || (!edit?.tripId&&edit?.trip===t.no) || (!edit?.tripId&&!edit?.trip&&auto?.id===t.id))?'selected':''}>${esc(t.no)} • ${esc(t.from)} → ${esc(t.to)}</option>`).join('')}</select></label>
+</div><div id="f_trip_hint" class="muted">${auto?`Автоматически выбран рейс по дате: ${esc(auto.no)}`:'Рейс по дате не найден'}</div>
+<div class="row"><button class="primary" onclick="${edit?`updateFuel('${edit.id}')`:'addFuel()'}">${edit?'Сохранить изменения':'Добавить заправку'}</button>${edit?`<button class="action" onclick="cancelFuelEdit()">Отмена</button>`:''}</div></div>
+<div class="card"><h3>Журнал заправок</h3>${db.fuel.slice().reverse().map(x=>{let tr=db.trips.find(t=>t.id===x.tripId);return `<div class="item"><b>${fuelLabel(x.type)}</b> • ${esc(x.date)} • <b>${esc(x.liters)} л</b> • ${esc(x.cost)} ${esc(x.currency)}<br>${esc(x.station)} • рейс ${esc(tr?.no||x.trip||'—')}<br><button class="action small" onclick="editFuel('${x.id}')">Редактировать</button> <button class="danger action small" onclick="del('fuel','${x.id}')">Удалить</button></div>`}).join('')||'<div class="muted">Нет заправок.</div>'}</div>`}
+function setFuelType(type){const x=document.getElementById('f_type');if(x)x.value=type;document.querySelectorAll('.fuelBtn').forEach(b=>b.classList.toggle('active',b.classList.contains(type)));}
 
-function more(){return `<h2>Маршрут, GPS, документы и отчёты</h2>
+function more(){return `<h2>Маршрут, GPS, документы и сервер</h2>
 <div class="card"><h3>GPS</h3><button class="primary" onclick="gps()">Получить текущую точку</button><div id="gpsout" class="muted">${db.gps.slice(-1)[0]?JSON.stringify(db.gps.slice(-1)[0]):''}</div></div>
 <div class="card"><h3>Точка маршрута / таможня</h3><div class="grid"><input id="r_city" placeholder="Город / пункт"><select id="r_type"><option>Маршрут</option><option>Загрузка</option><option>Выгрузка</option><option>Таможня</option><option>Стоянка</option></select><input id="r_note" placeholder="Примечание"><input id="r_date" type="datetime-local" value="${now()}"></div><button class="primary" onclick="addRoute()">Добавить</button>
 ${db.route.slice().reverse().map(x=>`<div class="item"><b>${esc(x.city)}</b> • <span class="badge">${esc(x.type)}</span><br>${esc(x.date)} • ${esc(x.note)}<br><button class="action small" onclick="editRoute('${x.id}')">Редактировать</button> <button class="danger action small" onclick="del('route','${x.id}')">Удалить</button></div>`).join('')}</div>
-<div class="card"><h3>Настройки компании</h3><input id="c_name" value="${esc(db.company.name)}"><input id="u_name" value="${esc(db.user.name)}"><select id="u_role"><option ${db.user.role==='dispatcher'?'selected':''}>dispatcher</option><option ${db.user.role==='manager'?'selected':''}>manager</option><option ${db.user.role==='driver'?'selected':''}>driver</option></select><input id="server" value="${esc(db.company.server)}" placeholder="URL API сервера"><button class="primary" onclick="saveSettings()">Сохранить</button></div>
+<div class="card"><h3>Настройки и сервер</h3><input id="c_name" value="${esc(db.company.name)}" placeholder="Название компании"><input id="u_name" value="${esc(db.user.name)}" placeholder="Пользователь"><select id="u_role"><option ${db.user.role==='dispatcher'?'selected':''}>dispatcher</option><option ${db.user.role==='manager'?'selected':''}>manager</option><option ${db.user.role==='driver'?'selected':''}>driver</option></select><input id="server" value="${esc(db.company.server)}" placeholder="URL API, например https://server.example.com"><input id="apiKey" type="password" value="${esc(db.company.apiKey||'')}" placeholder="API ключ"><div class="row"><button class="primary" onclick="saveSettings()">Сохранить</button><button class="action" onclick="pushServer()">Отправить на сервер</button><button class="action" onclick="loadServer()">Загрузить с сервера</button></div><div id="syncStatus" class="muted">${db.company.server?'Сервер настроен':'Сервер не настроен'}</div></div>
 <div class="card"><h3>Отчёты и резервная копия</h3><div class="row"><button class="action" onclick="csv()">CSV для Excel</button><button class="action" onclick="window.print()">Печать / PDF</button><button class="action" onclick="backup()">Backup JSON</button><label class="action">Restore<input type="file" accept=".json" style="display:none" onchange="restore(this)"></label></div></div>
-<div class="card"><h3>Документы рейсов</h3><div class="notice">При добавлении документа можно выбрать фото из галереи или сразу открыть камеру. Для PDF и других файлов используйте «Файл».</div>${db.docs.slice().reverse().map(x=>`<div class="item"><b>${esc(x.trip)}</b> • ${esc(x.type)}<br>${esc(x.name)} ${x.data?'<span class="badge">файл сохранён</span>':''}<br><span class="muted">${esc(x.note)}</span><div class="row"><button class="action small" onclick="editDoc('${x.id}')">Редактировать</button> <button class="danger action small" onclick="del('docs','${x.id}')">Удалить</button></div></div>`).join('')||'<div class="muted">Документов нет.</div>'}</div>`}
+<div class="card"><h3>Документы рейсов</h3><div class="notice">Документы теперь синхронизируются вместе с данными сервера.</div>${db.docs.slice().reverse().map(x=>`<div class="item"><b>${esc(x.trip)}</b> • ${esc(x.type)}<br>${esc(x.name)} ${x.data?'<span class="badge">файл сохранён</span>':''}<br><span class="muted">${esc(x.note)}</span><div class="row"><button class="action small" onclick="editDoc('${x.id}')">Редактировать</button> <button class="danger action small" onclick="del('docs','${x.id}')">Удалить</button></div></div>`).join('')||'<div class="muted">Документов нет.</div>'}</div>`}
+function expenseForm(e={},prefillTripId=''){let tripId=e.tripId||prefillTripId;return `<div class="grid">
+<label>Рейс<select id="e_trip"><option value="">Без рейса</option>${db.trips.map(t=>`<option value="${esc(t.id)}" ${tripId===t.id?'selected':''}>${esc(t.no)} • ${esc(t.from)} → ${esc(t.to)}</option>`).join('')}</select></label>
+<label>Дата<input id="e_date" type="datetime-local" value="${esc(e.date||now())}"></label>
+<label>Категория<input id="e_category" value="${esc(e.category)}" placeholder="Дорога, стоянка, питание, ремонт..."></label>
+<label>Сумма<input id="e_amount" type="number" step=".01" value="${esc(e.amount)}"></label>
+<label>Валюта<select id="e_cur">${currencyOptions(e.currency||'KZT')}</select></label>
+<label>Способ оплаты<select id="e_payment"><option value="cash" ${e.payment!=='card'?'selected':''}>💵 Наличные</option><option value="card" ${e.payment==='card'?'selected':''}>💳 Карта</option></select></label>
+</div><label>Примечание<input id="e_note" value="${esc(e.note)}"></label>`}
+function expenses(){let edit=db.expenses.find(x=>x.id===window.editingExpenseId);let pre=window.newExpenseTripId||'';return `<h2>Расходы денег</h2><div class="card"><h3>${edit?'Редактирование расхода':'Новый расход'}</h3>${expenseForm(edit||{},pre)}<div class="row"><button class="primary" onclick="${edit?`updateExpense('${edit.id}')`:'addExpense()'}">${edit?'Сохранить изменения':'Добавить расход'}</button>${edit?`<button class="action" onclick="cancelExpenseEdit()">Отмена</button>`:''}</div></div><div class="card"><h3>Журнал расходов</h3>${db.expenses.slice().reverse().map(x=>{let tr=db.trips.find(t=>t.id===x.tripId);return `<div class="item"><b>${esc(x.category||'Расход')}</b> • <b>${esc(x.amount)} ${esc(x.currency)}</b> • <span class="badge">${paymentLabel(x.payment)}</span><br>${esc(x.date)} • рейс ${esc(tr?.no||x.trip||'—')}${x.note?' • '+esc(x.note):''}<br><button class="action small" onclick="editExpense('${x.id}')">Редактировать</button> <button class="danger action small" onclick="del('expenses','${x.id}')">Удалить</button></div>`}).join('')||'<div class="muted">Расходов пока нет.</div>'}</div>`}
 
 function addTrip(){db.trips.push({id:id(),no:val('t_no'),date:val('t_date'),from:val('t_from'),to:val('t_to'),weight:val('t_weight'),status:val('t_status'),startKm:val('t_start'),endKm:val('t_end'),driver:val('t_driver'),truck:val('t_truck'),trailer:val('t_trailer')});save();render('trips')}
 function updateTrip(i){let t=db.trips.find(x=>x.id===i);if(!t)return;Object.assign(t,{no:val('t_no'),date:val('t_date'),from:val('t_from'),to:val('t_to'),weight:val('t_weight'),status:val('t_status'),startKm:val('t_start'),endKm:val('t_end'),driver:val('t_driver'),truck:val('t_truck'),trailer:val('t_trailer')});window.editingTripId=null;save();render('trips')}
@@ -115,14 +160,19 @@ function addTruck(){db.trucks.push({id:id(),plate:val('tr_plate'),model:val('tr_
 function editTruck(i){let x=db.trucks.find(a=>a.id===i);if(!x)return;let p=prompt('Госномер',x.plate);if(p===null)return;let m=prompt('Марка/модель',x.model||'');if(m===null)return;x.plate=p.trim();x.model=m.trim();save();render('fleet')}
 function addTrailer(){db.trailers.push({id:id(),plate:val('tl_plate'),type:val('tl_type')});save();render('fleet')}
 function editTrailer(i){let x=db.trailers.find(a=>a.id===i);if(!x)return;let p=prompt('Госномер',x.plate);if(p===null)return;let t=prompt('Тип',x.type||'');if(t===null)return;x.plate=p.trim();x.type=t.trim();save();render('fleet')}
-function addFuel(){let tripId=val('f_trip'),tr=db.trips.find(t=>t.id===tripId);db.fuel.push({id:id(),type:val('f_type'),date:val('f_date'),liters:val('f_liters'),cost:val('f_cost'),currency:val('f_cur'),station:val('f_station'),tripId:tripId,trip:tr?.no||''});save();render('fuel')}
-function updateFuel(i){let x=db.fuel.find(a=>a.id===i);if(!x)return;let tripId=val('f_trip'),tr=db.trips.find(t=>t.id===tripId);Object.assign(x,{type:val('f_type'),date:val('f_date'),liters:val('f_liters'),cost:val('f_cost'),currency:val('f_cur'),station:val('f_station'),tripId:tripId,trip:tr?.no||''});window.editingFuelId=null;save();render('fuel')}
+function addFuel(){autoFuelTrip();let tripId=val('f_trip')||fuelTripForDate(val('f_date'))?.id||'',tr=db.trips.find(t=>t.id===tripId);db.fuel.push({id:id(),type:val('f_type'),date:val('f_date'),liters:val('f_liters'),cost:val('f_cost'),currency:val('f_cur'),station:val('f_station'),tripId:tripId,trip:tr?.no||''});save();render('fuel')}
+function updateFuel(i){let x=db.fuel.find(a=>a.id===i);if(!x)return;autoFuelTrip();let tripId=val('f_trip')||fuelTripForDate(val('f_date'))?.id||'',tr=db.trips.find(t=>t.id===tripId);Object.assign(x,{type:val('f_type'),date:val('f_date'),liters:val('f_liters'),cost:val('f_cost'),currency:val('f_cur'),station:val('f_station'),tripId:tripId,trip:tr?.no||''});window.editingFuelId=null;save();render('fuel')}
 function editFuel(i){window.editingFuelId=i;render('fuel');scrollTo(0,0)}
 function cancelFuelEdit(){window.editingFuelId=null;render('fuel')}
+function newExpenseFor(tripId){window.editingExpenseId=null;window.newExpenseTripId=tripId;render('expenses');scrollTo(0,0)}
+function addExpense(){let tripId=val('e_trip'),tr=db.trips.find(t=>t.id===tripId);db.expenses.push({id:id(),tripId,trip:tr?.no||'',date:val('e_date'),category:val('e_category'),amount:val('e_amount'),currency:val('e_cur'),payment:val('e_payment'),note:val('e_note')});window.newExpenseTripId=null;save();render('expenses')}
+function updateExpense(i){let x=db.expenses.find(a=>a.id===i);if(!x)return;let tripId=val('e_trip'),tr=db.trips.find(t=>t.id===tripId);Object.assign(x,{tripId,trip:tr?.no||'',date:val('e_date'),category:val('e_category'),amount:val('e_amount'),currency:val('e_cur'),payment:val('e_payment'),note:val('e_note')});window.editingExpenseId=null;save();render('expenses')}
+function editExpense(i){window.editingExpenseId=i;window.newExpenseTripId=null;render('expenses');scrollTo(0,0)}
+function cancelExpenseEdit(){window.editingExpenseId=null;window.newExpenseTripId=null;render('expenses')}
 function addRoute(){db.route.push({id:id(),city:val('r_city'),type:val('r_type'),note:val('r_note'),date:val('r_date')});save();render('more')}
 function editRoute(i){let x=db.route.find(a=>a.id===i);if(!x)return;let city=prompt('Город / пункт',x.city);if(city===null)return;let type=prompt('Тип',x.type);if(type===null)return;let note=prompt('Примечание',x.note||'');if(note===null)return;x.city=city.trim();x.type=type.trim();x.note=note.trim();save();render('more')}
-function saveSettings(){db.company.name=val('c_name');db.company.server=val('server');db.user.name=val('u_name');db.user.role=val('u_role');save();render('more')}
-function del(type,x){db[type]=db[type].filter(a=>a.id!==x);save();render(type==='trips'?'trips':type==='fuel'?'fuel':type==='docs'?'more':type==='route'?'more':'fleet')}
+function saveSettings(){db.company.name=val('c_name');db.company.server=val('server');db.company.apiKey=val('apiKey');db.user.name=val('u_name');db.user.role=val('u_role');save();render('more')}
+function del(type,x){db[type]=db[type].filter(a=>a.id!==x);save();render(type==='trips'?'trips':type==='fuel'?'fuel':type==='expenses'?'expenses':type==='docs'?'more':type==='route'?'more':'fleet')}
 
 function docFor(tripId){
  let trip=db.trips.find(x=>x.id===tripId); if(!trip)return;
@@ -163,10 +213,11 @@ function editDoc(i){
 function gps(){if(!navigator.geolocation){alert('GPS недоступен в этом браузере');return}navigator.geolocation.getCurrentPosition(p=>{let x={date:now(),lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy};db.gps.push(x);save();document.getElementById('gpsout').textContent=`${x.lat}, ${x.lon} • точность ${Math.round(x.accuracy)} м`},e=>alert('Не удалось получить GPS: '+e.message),{enableHighAccuracy:true,timeout:10000})}
 function csv(){let rows=[['Рейс','Дата','Откуда','Куда','Вес т','Статус','Начальный км','Конечный км','Водитель','Тягач','Прицеп']].concat(db.trips.map(x=>[x.no,x.date,x.from,x.to,x.weight,x.status,x.startKm,x.endKm,x.driver,x.truck,x.trailer]));let s=rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(';')).join('\\n');download('TruckControl_Trips.csv','text/csv;charset=utf-8',s)}
 function backup(){download('TruckControl_Backup.json','application/json',JSON.stringify(db,null,2))}
-function restore(inp){let f=inp.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);db.trips ||= [];db.fuel ||= [];db.docs ||= [];db.route ||= [];db.drivers ||= [];db.trucks ||= [];db.trailers ||= [];db.gps ||= [];save();render('more')}catch(e){alert('Неверный JSON')}};r.readAsText(f)}
+function restore(inp){let f=inp.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);db.trips ||= [];db.fuel ||= [];db.expenses ||= [];db.docs ||= [];db.route ||= [];db.drivers ||= [];db.trucks ||= [];db.trailers ||= [];db.gps ||= [];save();render('more')}catch(e){alert('Неверный JSON')}};r.readAsText(f)}
 function download(name,type,data){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>render(b.dataset.tab));
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 render('home');
+if(db.company.server) loadServer().catch(()=>{});
 </script>
 </body></html>

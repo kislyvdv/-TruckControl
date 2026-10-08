@@ -1,0 +1,15 @@
+services:
+  truckcontrol:
+    build: .
+    container_name: truckcontrol-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      API_KEY: "change-this-key"
+      DB_PATH: /app/data/truckcontrol.sqlite3
+    volumes:
+      - truckcontrol_data:/app/data
+volumes:
+  truckcontrol_data:
