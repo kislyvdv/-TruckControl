@@ -1,1 +1,3 @@
 # No third-party Python packages required. Uses Python standard library.
+
+openpyxl>=3.1.0

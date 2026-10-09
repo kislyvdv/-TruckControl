@@ -19,6 +19,7 @@ TABLES = {
     'route': ['id','city','type','note','date'],
     'docs': ['id','tripId','trip','type','name','note','data','mime'],
     'gps': ['id','date','lat','lon','accuracy'],
+    'maintenance': ['id','date','km','truck','type','note','cost'],
 }
 
 SCHEMA = '''
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, tripId TEXT, trip TEXT
 CREATE TABLE IF NOT EXISTS route (id TEXT PRIMARY KEY, city TEXT, type TEXT, note TEXT, date TEXT);
 CREATE TABLE IF NOT EXISTS docs (id TEXT PRIMARY KEY, tripId TEXT, trip TEXT, type TEXT, name TEXT, note TEXT, data TEXT, mime TEXT);
 CREATE TABLE IF NOT EXISTS gps (id TEXT PRIMARY KEY, date TEXT, lat REAL, lon REAL, accuracy REAL);
+CREATE TABLE IF NOT EXISTS maintenance (id TEXT PRIMARY KEY, date TEXT, km TEXT, truck TEXT, type TEXT, note TEXT, cost TEXT);
 '''
 
 def conn():
@@ -68,6 +70,46 @@ def get_state():
         return state
     finally: c.close()
 
+def export_excel(state):
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        path = ROOT / 'data' / 'TruckControl_Отчёт.xlsx'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        wb = Workbook()
+        wb.remove(wb.active)
+        labels = {'trips':'Рейсы','drivers':'Водители','trucks':'Тягачи','trailers':'Прицепы','fuel':'Топливо','expenses':'Расходы','maintenance':'ТО','route':'Маршрут','docs':'Документы','gps':'GPS'}
+        for key, title in labels.items():
+            ws = wb.create_sheet(title)
+            rows = state.get(key, []) or []
+            if key == 'trips':
+                rows = [dict(row, **{'Километраж отчёта': max(0, float(row.get('endKm') or 0)-float(row.get('startKm') or 0))}) for row in rows]
+            cols = (['no','date','from','to','weight','status','startKm','endKm','Километраж отчёта','driver','truck','trailer'] if key == 'trips' else (list(dict.fromkeys(c for row in rows for c in row.keys() if c != 'data')) if rows else TABLES[key]))
+            ws.append(cols)
+            for cell in ws[1]:
+                cell.font = Font(bold=True, color='FFFFFF')
+                cell.fill = PatternFill('solid', fgColor='0F4C5C')
+            for row in rows:
+                ws.append([str(row.get(c, '') if row.get(c) is not None else '') for c in cols])
+            ws.freeze_panes = 'A2'
+            ws.auto_filter.ref = ws.dimensions
+            for column in ws.columns:
+                letter = column[0].column_letter
+                ws.column_dimensions[letter].width = min(max(max(len(str(c.value or '')) for c in column)+2, 12), 36)
+        # Summary worksheet with live-calculated mileage and totals
+        ws = wb.create_sheet('Сводка', 0)
+        ws.append(['Показатель','Значение'])
+        ws.append(['Всего пройдено, км', '=SUM(Рейсы!I:I)'])
+        ws.append(['Количество рейсов', '=COUNTA(Рейсы!A:A)-1'])
+        ws.append(['Всего заправок', '=COUNTA(Топливо!A:A)-1'])
+        ws.append(['Количество записей ТО', '=COUNTA(ТО!A:A)-1'])
+        for c in ws[1]:
+            c.font = Font(bold=True, color='FFFFFF'); c.fill = PatternFill('solid', fgColor='0F4C5C')
+        ws.column_dimensions['A'].width=28; ws.column_dimensions['B'].width=22
+        wb.save(path)
+    except Exception as exc:
+        print('Excel export skipped:', exc)
+
 def replace_state(state):
     c=conn()
     try:
@@ -86,6 +128,7 @@ def replace_state(state):
                 vals=[clean(item.get(col)) for col in cols]
                 c.execute(sql, vals)
         c.commit()
+        export_excel(state)
     except Exception:
         c.rollback(); raise
     finally: c.close()
