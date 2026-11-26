@@ -23,6 +23,74 @@ button.primary,button.action{border:0;border-radius:14px;padding:11px 15px;backg
 .picker{border:1px solid #d1d5db;background:#f9fafb;border-radius:14px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;min-height:105px}
 .picker b{font-size:13px}.picker span{font-size:11px;color:#6b7280}
 @media(max-width:520px){.pickerGrid{grid-template-columns:1fr}.picker{min-height:auto;flex-direction:row;justify-content:flex-start}.picker b{margin-left:4px}}
+
+/* TruckControl premium visual refresh */
+:root{
+  color-scheme:light;
+  --primary:#123b52;--primary2:#087f8c;--accent:#f0a928;--ink:#142b3b;
+  --surface:#ffffff;--soft:#edf5f7;--line:#dce7eb;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+html{background:#eaf1f4;scroll-behavior:smooth}
+body{color:var(--ink);background:linear-gradient(145deg,#e9f1f5 0%,#f4f7f8 48%,#e7eff2 100%);padding-bottom:94px}
+body::before{inset:72px 0 78px;opacity:.075;filter:saturate(.65) grayscale(.25)}
+header{padding:18px 20px 17px;background:linear-gradient(118deg,#102d43 0%,#124c60 58%,#087f8c 100%);box-shadow:0 8px 26px #0b2c4030;border-bottom:1px solid #ffffff22}
+.brand{font-size:22px;letter-spacing:.2px;font-weight:850;display:flex;align-items:center;gap:8px;text-shadow:0 2px 8px #0002}
+.sub{margin-top:4px;color:#d9edf1;letter-spacing:.25px;opacity:.9}
+main{max-width:980px;padding:18px 16px 30px}
+h2{font-size:23px;line-height:1.2;font-weight:850;letter-spacing:-.45px;color:#14384c;margin:8px 2px 16px}
+h3{font-size:16px;font-weight:800;color:#173b50;margin:3px 0 13px}
+.card{position:relative;overflow:hidden;background:rgba(255,255,255,.94);border:1px solid #dfe9ed;border-radius:22px;padding:19px;margin:14px 0;box-shadow:0 10px 28px #17394d0d,0 2px 7px #17394d08;backdrop-filter:blur(12px);transition:box-shadow .2s,border-color .2s,transform .2s}
+.card:focus-within{border-color:#9ccbd0;box-shadow:0 12px 30px #087f8c18,0 0 0 3px #087f8c0c}
+.metric{font-size:28px;letter-spacing:-.7px;color:#123b52;font-variant-numeric:tabular-nums}
+.muted{color:#71818c;line-height:1.45}
+.grid,.grid3{gap:12px}
+input,select,textarea{width:100%;padding:12px 13px;border:1px solid #d6e1e6;border-radius:13px;background:#fbfdfe;color:#17384b;margin:6px 0 10px;outline:none;box-shadow:inset 0 1px 2px #17394d08;transition:border-color .18s,box-shadow .18s,background .18s}
+input:hover,select:hover,textarea:hover{border-color:#a9c5ce}
+input:focus,select:focus,textarea:focus{border-color:#168b98;background:#fff;box-shadow:0 0 0 3px #0c89951c}
+label{display:block;color:#385364;font-size:13px;font-weight:700;letter-spacing:.08px}
+textarea{min-height:86px;resize:vertical}
+button{font-weight:700;letter-spacing:.08px;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease,background .16s ease}
+button:focus-visible{outline:3px solid #f0ad37;outline-offset:3px}
+button.primary,button.action,.picker{position:relative;isolation:isolate;border:1px solid #ffffff24;border-radius:14px;padding:12px 16px;background:linear-gradient(135deg,#123b52 0%,#087f8c 100%);color:#fff;box-shadow:0 6px 14px #0c596a22,inset 0 1px #ffffff26;cursor:pointer}
+button.primary::before,button.action::before{content:"";position:absolute;inset:1px;border-radius:inherit;background:linear-gradient(115deg,#ffffff18,transparent 55%);z-index:-1;pointer-events:none}
+button.primary:hover,button.action:hover{filter:brightness(1.07);transform:translateY(-2px);box-shadow:0 10px 20px #0c596a2b,inset 0 1px #ffffff35}
+button.primary:active,button.action:active,.picker:active{transform:translateY(0) scale(.985);filter:brightness(.98)}
+button.danger,.danger.action{background:linear-gradient(135deg,#a92d37,#df5154)!important;color:white!important;border:1px solid #ffffff35;box-shadow:0 6px 14px #b72d3725}
+button.ok{background:linear-gradient(135deg,#14734f,#22a477)!important;color:white!important;box-shadow:0 6px 14px #14734f25}
+button.small{border-radius:10px;padding:8px 11px;font-size:12px}
+.row{gap:9px}
+.row button{min-height:40px}
+.finishBtn{min-height:54px!important;border-radius:17px!important;font-size:16px!important;letter-spacing:.25px!important;background:linear-gradient(115deg,#087f68,#16a078)!important;box-shadow:0 10px 22px #13835e30!important}
+.finishBtn:hover{box-shadow:0 13px 26px #13835e42!important}
+.notice{padding:13px 15px;border-radius:14px;background:linear-gradient(120deg,#fff8e8,#fffdf7);border:1px solid #f2d89e;color:#76551b;line-height:1.45}
+.badge{padding:5px 10px;border-radius:999px;background:#e8f2f4;color:#276073;font-weight:750;border:1px solid #d5e7eb;font-size:11px;letter-spacing:.15px}
+.item{border-top:1px solid #e8eef0;padding:13px 2px;line-height:1.55}
+.item:first-child{border-top:0}
+.tripPanel{border-left:4px solid #0b8994;padding:12px 14px;background:linear-gradient(90deg,#edf8f8,#ffffff);border-radius:0 13px 13px 0}
+.sublist{margin-top:8px;padding:12px;background:#f3f8f9;border:1px solid #e4eef0;border-radius:13px}
+.expenseCash{background:#f0faf5;border-color:#d5eee0}
+.expenseCard{background:#eff6ff;border-color:#dce8fa}
+.fuelBtn{border:1px solid #d9e7eb;border-radius:15px;padding:13px 12px;font-weight:800;cursor:pointer;box-shadow:0 3px 9px #16394d0a;transition:.18s}
+.fuelBtn.diesel{background:linear-gradient(135deg,#e6f3f8,#f4fbfd);color:#155e75}
+.fuelBtn.adblue{background:linear-gradient(135deg,#e6f2ff,#f4f8ff);color:#075985}
+.fuelBtn.active{border-color:#e4a126;box-shadow:0 0 0 3px #f0ad3724,0 7px 15px #17394d12;transform:translateY(-1px)}
+.tabs{bottom:0;padding:7px max(6px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));background:rgba(255,255,255,.96);border-top:1px solid #dce7eb;box-shadow:0 -8px 24px #17394d12;backdrop-filter:blur(18px);gap:3px}
+.tabs button{position:relative;flex:1;min-width:0;border:0;border-radius:13px;background:transparent;color:#73838d;padding:10px 3px 9px;font-size:10px;font-weight:750;line-height:1.2;cursor:pointer}
+.tabs button.active{background:linear-gradient(145deg,#e5f4f5,#f1f9fa);color:#087583;box-shadow:inset 0 0 0 1px #cde7e9}
+.tabs button.active::before{content:"";position:absolute;top:-7px;left:30%;right:30%;height:3px;border-radius:0 0 4px 4px;background:linear-gradient(90deg,#f0ad37,#087f8c)}
+.loginWrap{max-width:460px;margin:7vh auto;padding:0 4px}
+.modal{background:#102b3c99;backdrop-filter:blur(5px)}
+.modalbox{border:1px solid #ffffffaa;border-radius:24px;padding:20px;background:linear-gradient(160deg,#fff,#f7fbfc);box-shadow:0 20px 60px #071e2e45}
+.pickerGrid{gap:12px}
+.picker{min-height:116px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(145deg,#f0f8fa,#ffffff);border:1px solid #d9e8ec;color:#17465a;box-shadow:0 6px 15px #17394d0d}
+.picker b{font-size:13px;color:#17465a}.picker span{font-size:11px;color:#71818c}
+.picker:hover{transform:translateY(-2px);border-color:#8ec4ca;box-shadow:0 10px 20px #087f8c16}
+.hidden{display:none}
+@media(min-width:700px){main{padding:24px 22px 40px}.card{padding:22px;margin:16px 0}.tabs{justify-content:center;gap:8px}.tabs button{max-width:120px;font-size:12px;padding:12px 8px}}
+@media(max-width:520px){main{padding:12px 11px 24px}.card{padding:15px;border-radius:18px;margin:11px 0}h2{font-size:21px}.grid3{gap:7px}.tabs button{font-size:9px;padding:10px 1px}.pickerGrid{grid-template-columns:1fr}.picker{min-height:58px;flex-direction:row;justify-content:flex-start;padding:12px 15px}.picker b{margin-left:4px}.picker span{margin-left:auto}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+
 </style>
 </head>
 <body>
