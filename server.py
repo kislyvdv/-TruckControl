@@ -15,9 +15,10 @@ TABLES = {
     'drivers': ['id','name','phone'],
     'trucks': ['id','plate','model'],
     'trailers': ['id','plate','type'],
-    'fuel': ['id','type','date','liters','cost','currency','station','tripId','trip'],
+    'fuel': ['id','type','date','liters','cost','currency','station','payment','bankCard','fuelCard','tripId','trip'],
     'expenses': ['id','tripId','trip','date','operationType','category','amount','currency','payment','bankCard','note'],
     'bankCards': ['id','name'],
+    'fuelCards': ['id','name'],
     'route': ['id','city','type','note','date'],
     'docs': ['id','tripId','trip','type','name','note','data','mime'],
     'gps': ['id','date','lat','lon','accuracy'],
@@ -32,9 +33,10 @@ CREATE TABLE IF NOT EXISTS archiveTrips (id TEXT PRIMARY KEY, no TEXT, date TEXT
 CREATE TABLE IF NOT EXISTS drivers (id TEXT PRIMARY KEY, name TEXT, phone TEXT);
 CREATE TABLE IF NOT EXISTS trucks (id TEXT PRIMARY KEY, plate TEXT, model TEXT);
 CREATE TABLE IF NOT EXISTS trailers (id TEXT PRIMARY KEY, plate TEXT, type TEXT);
-CREATE TABLE IF NOT EXISTS fuel (id TEXT PRIMARY KEY, type TEXT, date TEXT, liters TEXT, cost TEXT, currency TEXT, station TEXT, tripId TEXT, trip TEXT);
+CREATE TABLE IF NOT EXISTS fuel (id TEXT PRIMARY KEY, type TEXT, date TEXT, liters TEXT, cost TEXT, currency TEXT, station TEXT, payment TEXT, bankCard TEXT, fuelCard TEXT, tripId TEXT, trip TEXT);
 CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, tripId TEXT, trip TEXT, date TEXT, operationType TEXT, category TEXT, amount TEXT, currency TEXT, payment TEXT, bankCard TEXT, note TEXT);
 CREATE TABLE IF NOT EXISTS bankCards (id TEXT PRIMARY KEY, name TEXT);
+CREATE TABLE IF NOT EXISTS fuelCards (id TEXT PRIMARY KEY, name TEXT);
 CREATE TABLE IF NOT EXISTS route (id TEXT PRIMARY KEY, city TEXT, type TEXT, note TEXT, date TEXT);
 CREATE TABLE IF NOT EXISTS docs (id TEXT PRIMARY KEY, tripId TEXT, trip TEXT, type TEXT, name TEXT, note TEXT, data TEXT, mime TEXT);
 CREATE TABLE IF NOT EXISTS gps (id TEXT PRIMARY KEY, date TEXT, lat REAL, lon REAL, accuracy REAL);
@@ -51,6 +53,9 @@ def conn():
     expense_cols = {row['name'] for row in c.execute('PRAGMA table_info(expenses)').fetchall()}
     if 'operationType' not in expense_cols: c.execute('ALTER TABLE expenses ADD COLUMN operationType TEXT')
     if 'bankCard' not in expense_cols: c.execute('ALTER TABLE expenses ADD COLUMN bankCard TEXT')
+    fuel_cols = {row['name'] for row in c.execute('PRAGMA table_info(fuel)').fetchall()}
+    for col in ('payment','bankCard','fuelCard'):
+        if col not in fuel_cols: c.execute(f'ALTER TABLE fuel ADD COLUMN {col} TEXT')
     c.execute("INSERT OR IGNORE INTO company(id,name,server) VALUES(1,'Моя транспортная компания','')")
     c.commit()
     return c
@@ -76,7 +81,7 @@ def get_state():
         for name, cols in TABLES.items():
             rows=c.execute('SELECT * FROM '+name).fetchall()
             state[name]=[row_to_dict(r) for r in rows]
-            if name == 'bankCards': state[name]=[r['name'] for r in rows]
+            if name in ('bankCards','fuelCards'): state[name]=[r['name'] for r in rows]
         return state
     finally: c.close()
 
@@ -95,9 +100,10 @@ def export_excel(state):
             'drivers': ('Водители', [('name','ФИО водителя'),('phone','Телефон')]),
             'trucks': ('Тягачи', [('plate','Государственный номер'),('model','Модель')]),
             'trailers': ('Прицепы', [('plate','Государственный номер'),('type','Тип прицепа')]),
-            'fuel': ('Топливо', [('type','Вид топлива'),('date','Дата'),('liters','Количество, л'),('cost','Стоимость'),('currency','Валюта'),('station','Заправочная станция'),('trip','Номер рейса')]),
+            'fuel': ('Топливо', [('type','Вид топлива'),('date','Дата'),('liters','Количество, л'),('cost','Стоимость'),('currency','Валюта'),('station','Заправочная станция'),('payment','Способ оплаты'),('bankCard','Банковская карта'),('fuelCard','Топливная карта'),('trip','Номер рейса')]),
             'expenses': ('Расходы', [('operationType','Тип операции'),('category','Категория'),('date','Дата'),('amount','Сумма'),('currency','Валюта'),('payment','Способ оплаты'),('bankCard','Банковская карта'),('trip','Номер рейса'),('note','Примечание')]),
             'bankCards': ('Банковские карты', [('name','Название карты')]),
+            'fuelCards': ('Топливные карты', [('name','Название карты')]),
             'maintenance': ('Техническое обслуживание', [('date','Дата'),('km','Пробег, км'),('truck','Тягач'),('type','Вид работ'),('note','Описание работ'),('cost','Стоимость')]),
             'route': ('Маршрут', [('city','Населённый пункт'),('type','Тип точки'),('note','Примечание'),('date','Дата')]),
             'docs': ('Документы', [('trip','Номер рейса'),('type','Тип документа'),('name','Название файла'),('note','Примечание'),('mime','Формат файла')]),
@@ -106,7 +112,7 @@ def export_excel(state):
         for key, (title, fields) in definitions.items():
             ws = wb.create_sheet(title)
             rows = state.get(key, []) or []
-            if key == 'bankCards': rows = [{'name': item} if isinstance(item, str) else item for item in rows]
+            if key in ('bankCards','fuelCards'): rows = [{'name': item} if isinstance(item, str) else item for item in rows]
             ws.append([label for _, label in fields])
             for row in rows:
                 values=[]
@@ -159,7 +165,7 @@ def replace_state(state):
             quoted_cols=','.join('"from"' if x=='from' else '"to"' if x=='to' else x for x in cols)
             sql=f'INSERT INTO {name} ({quoted_cols}) VALUES ({placeholders})'
             for item in state.get(name,[]) or []:
-                if name == 'bankCards' and isinstance(item, str): item={'id':item,'name':item}
+                if name in ('bankCards','fuelCards') and isinstance(item, str): item={'id':item,'name':item}
                 vals=[clean(item.get(col)) for col in cols]
                 c.execute(sql, vals)
         c.commit()
