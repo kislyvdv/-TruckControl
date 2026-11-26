@@ -92,6 +92,56 @@ button.small{border-radius:10px;padding:8px 11px;font-size:12px}
 @media(max-width:520px){main{padding:12px 11px 24px}.card{padding:15px;border-radius:18px;margin:11px 0}h2{font-size:21px}.grid3{gap:7px}.tabs button{font-size:9px;padding:10px 1px}.pickerGrid{grid-template-columns:1fr}.picker{min-height:58px;flex-direction:row;justify-content:flex-start;padding:12px 15px}.picker b{margin-left:4px}.picker span{margin-left:auto}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
 
+
+/* TruckControl Aurora UI: rounded surfaces, vivid accents and clearer hierarchy */
+:root{--ink:#14243b;--primary:#3157c8;--primary2:#087fba;--accent:#ffb547;--line:#dce5f4;--surface:#fff;--soft:#edf5ff}
+body{background:radial-gradient(ellipse at 4% 4%,#dceaff 0,transparent 34%),radial-gradient(ellipse at 96% 18%,#d9f8f2 0,transparent 30%),linear-gradient(145deg,#edf2ff 0%,#f8faff 48%,#e9f8f6 100%)}
+body::before{opacity:.035;filter:saturate(.9)}
+header{position:sticky;overflow:hidden;background:radial-gradient(circle at 88% -20%,#42d6c5aa 0,transparent 34%),radial-gradient(circle at 8% 120%,#6b8dff88 0,transparent 40%),linear-gradient(118deg,#172b55 0%,#274c9d 48%,#087e91 100%);border:0;border-radius:0 0 28px 28px;box-shadow:0 14px 34px #203d7833}
+header::after{content:"";position:absolute;width:170px;height:170px;border:1px solid #ffffff24;border-radius:50%;right:-48px;top:-95px;box-shadow:0 0 0 18px #ffffff0b,0 0 0 38px #ffffff08;pointer-events:none}
+.brand{font-size:23px;letter-spacing:.35px}.sub{font-size:12px}
+h2{display:flex;align-items:center;gap:10px;color:#1b3261;font-size:24px;letter-spacing:-.55px}
+h2::before{content:"";display:inline-block;width:7px;height:27px;border-radius:99px;background:linear-gradient(180deg,#ffbd59,#f07c61,#7d83ee);box-shadow:0 3px 9px #ed9c5b55}
+h3{color:#263d70;font-size:16px;letter-spacing:.05px}
+.card{border:1px solid #e0e8f7;border-radius:27px;padding:20px;background:linear-gradient(145deg,#fff 0%,#f9fbff 62%,#f4fbff 100%);box-shadow:0 13px 30px #243f7410,0 3px 8px #243f7408}
+.card::before{content:"";position:absolute;top:0;left:20px;right:20px;height:3px;border-radius:0 0 9px 9px;background:linear-gradient(90deg,#ffbd59,#ff7c72,#8879ed,#45c9c0);opacity:.85}
+.card:focus-within{border-color:#9bb9f4;box-shadow:0 15px 34px #456bd21c,0 0 0 4px #6488ed12}
+.metric{display:inline-block;padding:5px 12px;border-radius:16px;color:#2445a1;background:linear-gradient(135deg,#e9efff,#e7f8ff);box-shadow:inset 0 1px #fff;font-size:29px}
+.grid,.grid3{gap:13px}
+input,select,textarea{border:1px solid #dce5f4;border-radius:18px;padding:13px 15px;background:linear-gradient(145deg,#fff,#f7faff);color:#1e3558;box-shadow:0 3px 9px #2b4d8410,inset 0 1px #fff}
+input:focus,select:focus,textarea:focus{border-color:#718de9;background:#fff;box-shadow:0 0 0 4px #718de922,0 5px 14px #3456a510}
+label{color:#40577b;font-weight:750}
+button{border-radius:19px;letter-spacing:.12px}
+button.primary,button.action,.picker{border:1px solid #ffffff55;border-radius:19px;padding:12px 17px;background:linear-gradient(120deg,#3157c8 0%,#536ee0 48%,#078fa8 100%);box-shadow:0 8px 17px #365acb32,inset 0 1px #ffffff55}
+button.primary::before,button.action::before{inset:1px;border-radius:inherit;background:linear-gradient(110deg,#ffffff2b,transparent 48%,#ffffff0c)}
+button.primary:hover,button.action:hover{transform:translateY(-3px);filter:saturate(1.13) brightness(1.04);box-shadow:0 13px 23px #365acb3b,inset 0 1px #ffffff66}
+button.primary:active,button.action:active{transform:translateY(0) scale(.97)}
+button.danger,.danger.action{background:linear-gradient(125deg,#e34c68,#f17b58)!important;box-shadow:0 8px 17px #e34c6830!important;border-radius:18px!important}
+button.ok{background:linear-gradient(125deg,#0b9d82,#42c78b)!important;box-shadow:0 8px 17px #16a77e30!important;border-radius:18px!important}
+button.small{border-radius:14px!important;padding:8px 12px}
+.finishBtn{min-height:58px!important;border-radius:23px!important;background:linear-gradient(110deg,#08a889 0%,#22b88e 42%,#4acb79 100%)!important;box-shadow:0 12px 26px #10a77e40,inset 0 1px #ffffff66!important;font-size:16px!important}
+.finishBtn::after{content:"";position:absolute;inset:2px;border-radius:21px;border:1px solid #ffffff45;pointer-events:none}
+.batchFinishCard{border:1px solid #a9e5d2!important;background:radial-gradient(circle at 100% 0,#c9f8e6 0,transparent 43%),linear-gradient(145deg,#fff,#f0fff8)!important;border-radius:29px!important}
+.notice{border-radius:20px;background:linear-gradient(120deg,#fff5d9,#fff0e8);border:1px solid #f6d69b;color:#81531d;box-shadow:0 5px 13px #dca54a14}
+.badge{border-radius:999px;padding:6px 11px;background:linear-gradient(120deg,#e9efff,#e6f8fa);color:#3555a2;border:1px solid #d9e3fa}
+.item{margin:8px 0;padding:13px 15px;border:1px solid #e5ebf7!important;border-radius:18px;background:linear-gradient(120deg,#fbfcff,#f4f8ff)}
+.item:nth-child(3n+1){background:linear-gradient(120deg,#f1f5ff,#fbfcff)}.item:nth-child(3n+2){background:linear-gradient(120deg,#effbf8,#fbfffd)}.item:nth-child(3n){background:linear-gradient(120deg,#fff6ed,#fffdf9)}
+.tripPanel{border:1px solid #c9e8ef;border-left:0;border-radius:20px;background:linear-gradient(120deg,#eaf8ff,#f7fbff);padding:14px 16px}
+.sublist{border-radius:18px;background:linear-gradient(135deg,#f2f4ff,#f1fbff);border:1px solid #e0e6fa}
+.expenseCash{background:linear-gradient(135deg,#e7fbf1,#f6fff9)!important;border-color:#c8eedb!important}.expenseCard{background:linear-gradient(135deg,#eaf1ff,#f8faff)!important;border-color:#d5e0fb!important}
+.fuelBtn{min-height:58px;border:1px solid #ffffffaa;border-radius:21px;padding:14px 12px;box-shadow:0 7px 15px #29466d12;font-size:14px}
+.fuelBtn.diesel{background:linear-gradient(135deg,#d9f0ff,#eef8ff);color:#12618c}.fuelBtn.adblue{background:linear-gradient(135deg,#e2eaff,#f4f5ff);color:#465bb4}.fuelBtn.antigel{background:linear-gradient(135deg,#ffebd8,#fff6e9);color:#a45a1c}
+.fuelBtn.active{border:2px solid #ffb547;box-shadow:0 0 0 4px #ffb5472b,0 10px 19px #29466d18;transform:translateY(-2px)}
+.tabs{border:1px solid #e1e8f7;border-bottom:0;border-radius:25px 25px 0 0;background:linear-gradient(110deg,#ffffffed,#f2f7ffed,#effbf8ed);box-shadow:0 -10px 30px #263e7418;backdrop-filter:blur(20px)}
+.tabs button{border-radius:17px;color:#77839d;padding:11px 3px 10px;transition:all .2s ease}.tabs button.active{color:#294fc0;background:linear-gradient(145deg,#e8edff,#e6f8fa);box-shadow:inset 0 0 0 1px #d3defb,0 5px 12px #385bc51c}
+.tabs button.active::before{top:3px;left:34%;right:34%;height:3px;border-radius:9px;background:linear-gradient(90deg,#ffb547,#ef7d79,#6d7ce2,#22bba6)}
+.modal{background:#17264c99;backdrop-filter:blur(9px)}.modalbox{border:1px solid #ffffffc9;border-radius:30px 30px 24px 24px;background:linear-gradient(145deg,#fff,#f3f7ff);box-shadow:0 24px 70px #101e464d}
+.picker{color:#3454a7;background:linear-gradient(145deg,#edf2ff,#f1fcff);border:1px solid #dce5fb;border-radius:23px;box-shadow:0 8px 18px #3157c818}.picker b{color:#2e4fa2}.picker span{color:#7483a3}.picker:hover{border-color:#8fa6ee;box-shadow:0 12px 22px #3157c825}
+.loginWrap .card{border-radius:30px;background:radial-gradient(circle at 100% 0,#e5f2ff 0,transparent 38%),linear-gradient(145deg,#fff,#f8faff)}
+button,select,input,textarea,.badge,.notice,.sublist,.tripPanel{border-radius:18px}button:disabled{filter:grayscale(.25);opacity:.48;box-shadow:none!important}
+@media(max-width:520px){.card{padding:17px;border-radius:23px}h2{font-size:21px}.tabs{gap:2px}.tabs button{border-radius:13px;font-size:9px}.finishBtn{font-size:15px!important}}
+@media(prefers-reduced-motion:reduce){button,.card,.fuelBtn,.tabs button{transition:none!important}}
+
 </style>
 </head>
 <body>
