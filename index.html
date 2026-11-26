@@ -63,6 +63,7 @@ button.small{border-radius:10px;padding:8px 11px;font-size:12px}
 .row button{min-height:40px}
 .finishBtn{min-height:54px!important;border-radius:17px!important;font-size:16px!important;letter-spacing:.25px!important;background:linear-gradient(115deg,#087f68,#16a078)!important;box-shadow:0 10px 22px #13835e30!important}
 .finishBtn:hover{box-shadow:0 13px 26px #13835e42!important}
+.finishBtn:disabled{opacity:.42;filter:grayscale(.4);cursor:not-allowed;box-shadow:none!important}.batchFinishCard{border:1px solid #b8dfd3;background:linear-gradient(145deg,#fff 0%,#f2fbf7 100%)}
 .notice{padding:13px 15px;border-radius:14px;background:linear-gradient(120deg,#fff8e8,#fffdf7);border:1px solid #f2d89e;color:#76551b;line-height:1.45}
 .badge{padding:5px 10px;border-radius:999px;background:#e8f2f4;color:#276073;font-weight:750;border:1px solid #d5e7eb;font-size:11px;letter-spacing:.15px}
 .item{border-top:1px solid #e8eef0;padding:13px 2px;line-height:1.55}
@@ -176,27 +177,61 @@ ${db.trips.slice().reverse().map(t=>{let docs=tripDocs(t),ex=tripExpenses(t),fu=
 <div class="sublist"><b>Расходы (${ex.length})</b>${ex.map(e=>`<div class="small ${e.payment==='card'?'expenseCard':'expenseCash'}">${esc(e.category||'Расход')} • ${esc(e.amount)} ${esc(e.currency)} • ${paymentLabel(e.payment)}${e.note?' • '+esc(e.note):''}</div>`).join('')||'<div class="muted">Нет денежных расходов</div>'}</div>
 <div class="sublist"><b>Топливо (${fu.length})</b>${fu.map(f=>`<div class="small">${fuelLabel(f.type)} • ${esc(f.liters)} л • ${esc(f.cost)} ${esc(f.currency)}</div>`).join('')||'<div class="muted">Нет заправок</div>'}</div>
 </div>`}).join('')||'<div class="muted">Рейсов пока нет.</div>'}</div>
-<div class="card"><h3>Завершение рейса</h3>
-<label>Выберите рейс для завершения<select id="finish_trip"><option value="">Выберите активный рейс</option>${db.trips.map(t=>`<option value="${esc(t.id)}">${esc(t.no)} • ${esc(t.from)} → ${esc(t.to)}</option>`).join('')}</select></label>
-<button class="primary finishBtn" onclick="finishSelectedTrip()">✓ Завершить рейс и закрыть отчёт</button>
+<div class="card batchFinishCard"><h3>Завершение всех активных рейсов</h3>
+<div class="notice">Все активные рейсы будут закрыты одновременно одним общим отчётом. В него попадут маршруты, пробег, расходы, снятие наличных, дизель, AdBlue, антигель и документы.</div>
+<div class="grid3" style="margin-top:12px"><div class="sublist"><b>${db.trips.length}</b><div class="small">Активных рейсов</div></div><div class="sublist"><b>${db.expenses.length}</b><div class="small">Расходов и снятий</div></div><div class="sublist"><b>${db.fuel.length}</b><div class="small">Записей топлива</div></div></div>
+<button class="primary finishBtn" onclick="finishAllTrips()" ${db.trips.length?'':'disabled'}>✓ Завершить все рейсы одним отчётом</button>
 </div>
 <div class="card"><div class="notice" id="syncStatus">${db.company.server?'Сервер: '+esc(db.company.server):'Сервер не настроен. Локальный режим.'}</div></div>`}
-function archivePage(){return `<h2>Архив рейсов</h2><div class="card"><div class="muted">Завершённые рейсы и закрытые отчёты хранятся отдельно от актуальных.</div>
-${db.archiveTrips.slice().reverse().map(t=>`<div class="item"><b>${esc(t.no)}</b> <span class="badge">Завершён</span><br>${esc(t.from)} → ${esc(t.to)}<br><span class="muted">Дата рейса: ${esc(t.date)} • Закрыт: ${esc(t.completedAt||'—')} • ${esc(t.driver||'')}</span><br>
-<button class="action small" onclick="viewArchivedReport('${t.id}')">Открыть отчёт</button> <button class="action small" onclick="downloadArchivedReport('${t.id}')">Скачать отчёт</button></div>`).join('')||'<div class="muted">Архив пока пуст.</div>'}</div>
-<button class="action" onclick="logout()">Выйти из профиля</button>`}
-function buildTripReport(t){const fu=tripFuel(t),ex=tripExpenses(t),docs=tripDocs(t);const liters=type=>fu.filter(x=>x.type===type).reduce((s,x)=>s+Number(x.liters||0),0);const costs=type=>fu.filter(x=>x.type===type).reduce((s,x)=>s+Number(x.cost||0),0);
-return [`ОТЧЁТ ПО РЕЙСУ ${t.no||''}`,`Дата: ${t.date||''}`,`Маршрут: ${t.from||''} → ${t.to||''}`,`Водитель: ${t.driver||'—'}`,`Тягач: ${t.truck||'—'}`,`Прицеп: ${t.trailer||'—'}`,`Пробег: ${Math.max(0,Number(t.endKm||0)-Number(t.startKm||0))} км`,`Дизель: ${liters('diesel')} л, ${costs('diesel')} ${fu.find(x=>x.type==='diesel')?.currency||''}`,`AdBlue: ${liters('adblue')} л, ${costs('adblue')} ${fu.find(x=>x.type==='adblue')?.currency||''}`,`Антигель: ${liters('antigel')} л, ${costs('antigel')} ${fu.find(x=>x.type==='antigel')?.currency||''}`,`Расходы: ${ex.length}`, ...ex.map(x=>`• ${x.category||'Расход'}: ${x.amount||0} ${x.currency||''} (${x.note||''})`),`Документов: ${docs.length}`,`Закрыл: ${db.user.name||'—'}`,`Время закрытия: ${new Date().toLocaleString('ru-RU')}`].join('\n')}
-function finishSelectedTrip(){const id=val('finish_trip');if(!id){alert('Сначала выберите рейс');return}finishTrip(id)}
-async function finishTrip(id){const i=db.trips.findIndex(x=>x.id===id);if(i<0)return;const t=db.trips[i];if(!confirm(`Завершить рейс ${t.no} и закрыть его отчёт?`))return;
-const completed={...t,status:'Завершён',completedAt:new Date().toLocaleString('ru-RU'),closedBy:db.user.name,report:buildTripReport(t)};
-db.archiveTrips.push(completed);db.trips.splice(i,1);save();render('home');
-if(db.company.server){const ok=await pushServer();if(ok){alert('Рейс перенесён в архив. Отчёт сохранён на сервере.');return}}
-const report=completed.report;
-if(navigator.share){try{await navigator.share({title:`Отчёт ${completed.no}`,text:report});alert('Рейс закрыт и помещён в архив. Выберите приложение для отправки отчёта.')}catch(e){if(e.name!=='AbortError')alert('Рейс закрыт и помещён в архив. Отчёт доступен в архиве.')}}else{download(`Отчёт_${completed.no||'рейс'}.txt`,'text/plain;charset=utf-8',report);alert('Рейс закрыт и помещён в архив. Отчёт скачан.')}
+function archivePage(){
+ const groups=new Map();
+ db.archiveTrips.forEach(t=>{const reportBatch=(t.report||'').match(/Номер группового закрытия:\s*(.+)/)?.[1];const key=t.batchId||reportBatch||t.completedAt||t.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(t)});
+ const batches=[...groups.entries()].reverse();
+ return `<h2>Архив отчётов</h2><div class="card"><div class="muted">Каждое групповое закрытие хранится одним отчётом, даже если в него вошло несколько рейсов.</div>
+ ${batches.map(([key,trips])=>{const first=trips[0];return `<div class="item"><b>Общий отчёт: ${trips.length} ${trips.length===1?'рейс':(trips.length>=2&&trips.length<=4?'рейса':'рейсов')}</b> <span class="badge">Закрыто</span><br><span class="muted">${esc(first.completedAt||'—')} • ${esc(first.closedBy||'')}</span><div class="sublist">${trips.map(t=>`<div class="small"><b>${esc(t.no||'Без номера')}</b> • ${esc(t.from||'')} → ${esc(t.to||'')}</div>`).join('')}</div>
+ <button class="action small" onclick="viewArchivedReport('${esc(first.id)}')">Открыть общий отчёт</button> <button class="action small" onclick="downloadArchivedReport('${esc(first.id)}')">Скачать общий отчёт</button></div>`}).join('')||'<div class="muted">Архив пока пуст.</div>'}</div>
+ <button class="action" onclick="logout()">Выйти из профиля</button>`
+}
+function buildBatchReport(trips,fuelRows,expenseRows,docsRows,closedAt,batchId){
+ const sum=(rows,key)=>rows.reduce((a,x)=>a+Number(x[key]||0),0);
+ const fuelFor=type=>fuelRows.filter(x=>(x.type||'diesel')===type);
+ const fuelLine=type=>{const rows=fuelFor(type);const currencies=[...new Set(rows.map(x=>x.currency).filter(Boolean))];return `${fuelLabel(type)}: ${sum(rows,'liters').toFixed(2)} л; стоимость ${sum(rows,'cost').toFixed(2)}${currencies.length?` ${currencies.join('/')}`:''}`};
+ const totalKm=trips.reduce((a,t)=>a+Math.max(0,Number(t.endKm||0)-Number(t.startKm||0)),0);
+ const tripLines=trips.map((t,i)=>`${i+1}. ${t.no||'Без номера'} | ${t.date||'Дата не указана'} | ${t.from||'—'} → ${t.to||'—'} | водитель: ${t.driver||'—'} | тягач: ${t.truck||'—'} | прицеп: ${t.trailer||'—'} | пробег: ${Math.max(0,Number(t.endKm||0)-Number(t.startKm||0))} км`);
+ const expenseLines=expenseRows.map((x,i)=>`${i+1}. ${x.operationType==='withdrawal'||x.category==='Снятие наличных'?'Снятие наличных':(x.category||'Расход')}: ${x.amount||0} ${x.currency||''}; оплата: ${paymentLabel(x.payment)}${x.bankCard?`; карта: ${x.bankCard}`:''}${x.trip?`; рейс: ${x.trip}`:''}${x.note?`; примечание: ${x.note}`:''}`);
+ const fuelLines=fuelRows.map((x,i)=>`${i+1}. ${fuelLabel(x.type)}: ${x.liters||0} л; ${x.cost||0} ${x.currency||''}; ${x.station||'АЗС не указана'}${x.trip?`; рейс: ${x.trip}`:''}`);
+ const docLines=docsRows.map((x,i)=>`${i+1}. ${x.trip||'Без рейса'} | ${x.type||'Документ'} | ${x.name||'Без названия'}${x.note?` | ${x.note}`:''}`);
+ return [`ОБЩИЙ ОТЧЁТ ПО ВСЕМ РЕЙСАМ`,`Номер группового закрытия: ${batchId}`,`Дата и время закрытия: ${closedAt}`,`Закрыл: ${db.user.name||'—'}`,`Количество рейсов: ${trips.length}`,`Общий пробег: ${totalKm} км`,'',`РЕЙСЫ`,...tripLines,'',`ИТОГ ПО ТОПЛИВУ`,fuelLine('diesel'),fuelLine('adblue'),fuelLine('antigel'),`Всего записей заправок: ${fuelRows.length}`,'',`ДЕТАЛИ ЗАПРАВОК`,...(fuelLines.length?fuelLines:['Заправок нет']),'',`РАСХОДЫ И СНЯТИЕ НАЛИЧНЫХ`,`Количество операций: ${expenseRows.length}`,`Сумма операций по валютам:`,...([...new Set(expenseRows.map(x=>x.currency||'Без валюты'))].map(c=>`${c}: ${sum(expenseRows.filter(x=>(x.currency||'Без валюты')===c),'amount').toFixed(2)}`)),...(expenseLines.length?expenseLines:['Расходов нет']),'',`ДОКУМЕНТЫ`,...(docLines.length?docLines:['Документов нет']),'',`После закрытия активные рейсы, текущие расходы и текущие записи топлива перенесены в этот общий архивный отчёт.`].join('\n');
+}
+async function finishAllTrips(){
+ const trips=[...db.trips];
+ if(!trips.length){alert('Нет активных рейсов для завершения');return}
+ const fuelRows=[...db.fuel],expenseRows=[...db.expenses];
+ const ids=new Set(trips.map(t=>t.id));
+ const docsRows=db.docs.filter(d=>ids.has(d.tripId)||!d.tripId);
+ const batchId='ПАКЕТ-'+new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14)+'-'+id().slice(-4);
+ const closedAt=new Date().toLocaleString('ru-RU');
+ const report=buildBatchReport(trips,fuelRows,expenseRows,docsRows,closedAt,batchId);
+ const confirmText=`Закрыть ВСЕ активные рейсы (${trips.length}) одним общим отчётом?\n\nВ общий отчёт войдут ${expenseRows.length} расходов/снятий и ${fuelRows.length} записей топлива (дизель, AdBlue, антигель).\n\nПосле закрытия активный список и счётчики топлива обнулятся. Данные останутся в архивном отчёте.`;
+ if(!confirm(confirmText))return;
+ const archived=trips.map(t=>({...t,status:'Завершён',completedAt:closedAt,closedBy:db.user.name,batchId,batchTitle:batchId,report}));
+ db.archiveTrips.push(...archived);
+ db.trips=[];
+ db.fuel=[];
+ db.expenses=[];
+ save();
+ render('home');
+ let serverSaved=false;
+ if(db.company.server)serverSaved=await pushServer();
+ if(navigator.share){
+   try{await navigator.share({title:`Общий отчёт ${batchId}`,text:report});alert(serverSaved?'Все рейсы закрыты одним отчётом. Данные сохранены на сервере, отчёт передан в меню отправки.':'Все рейсы закрыты одним отчётом. Отчёт сохранён в архиве и передан в меню отправки.');return}
+   catch(e){if(e.name==='AbortError'){alert('Рейсы закрыты. Общий отчёт сохранён в архиве.');return}}
+ }
+ download(`Общий_отчёт_${batchId}.txt`,'text/plain;charset=utf-8',report);
+ alert(serverSaved?'Все рейсы закрыты. Общий отчёт сохранён на сервере и скачан.':'Все рейсы закрыты. Общий отчёт сохранён в архиве и скачан.');
 }
 function viewArchivedReport(id){const t=db.archiveTrips.find(x=>x.id===id);if(t)alert(t.report||buildTripReport(t))}
-function downloadArchivedReport(id){const t=db.archiveTrips.find(x=>x.id===id);if(t)download(`Отчёт_${t.no||'рейс'}.txt`,'text/plain;charset=utf-8',t.report||buildTripReport(t))}
+function downloadArchivedReport(id){const t=db.archiveTrips.find(x=>x.id===id);if(t)download(`Общий_отчёт_${t.batchId||t.no||'рейсы'}.txt`,'text/plain;charset=utf-8',t.report||buildTripReport(t))}
 function tripForm(t={},editing=false){
  return `<div class="grid">
 <label>Номер<input id="t_no" value="${esc(t.no)}" placeholder="TR-2026-001"></label><label>Дата<input id="t_date" type="date" value="${esc(t.date)}"></label>
