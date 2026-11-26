@@ -11,11 +11,13 @@ PORT = int(os.getenv('PORT', '8080'))
 
 TABLES = {
     'trips': ['id','no','date','from','to','weight','status','startKm','endKm','driver','truck','trailer'],
+    'archiveTrips': ['id','no','date','from','to','weight','status','startKm','endKm','driver','truck','trailer','completedAt','closedBy','report'],
     'drivers': ['id','name','phone'],
     'trucks': ['id','plate','model'],
     'trailers': ['id','plate','type'],
     'fuel': ['id','type','date','liters','cost','currency','station','tripId','trip'],
-    'expenses': ['id','tripId','trip','date','category','amount','currency','payment','note'],
+    'expenses': ['id','tripId','trip','date','operationType','category','amount','currency','payment','bankCard','note'],
+    'bankCards': ['id','name'],
     'route': ['id','city','type','note','date'],
     'docs': ['id','tripId','trip','type','name','note','data','mime'],
     'gps': ['id','date','lat','lon','accuracy'],
@@ -26,11 +28,13 @@ SCHEMA = '''
 CREATE TABLE IF NOT EXISTS company (id INTEGER PRIMARY KEY CHECK(id=1), name TEXT NOT NULL DEFAULT '', server TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS trips (id TEXT PRIMARY KEY, no TEXT, date TEXT, "from" TEXT, "to" TEXT, weight TEXT, status TEXT, startKm TEXT, endKm TEXT, driver TEXT, truck TEXT, trailer TEXT);
+CREATE TABLE IF NOT EXISTS archiveTrips (id TEXT PRIMARY KEY, no TEXT, date TEXT, "from" TEXT, "to" TEXT, weight TEXT, status TEXT, startKm TEXT, endKm TEXT, driver TEXT, truck TEXT, trailer TEXT, completedAt TEXT, closedBy TEXT, report TEXT);
 CREATE TABLE IF NOT EXISTS drivers (id TEXT PRIMARY KEY, name TEXT, phone TEXT);
 CREATE TABLE IF NOT EXISTS trucks (id TEXT PRIMARY KEY, plate TEXT, model TEXT);
 CREATE TABLE IF NOT EXISTS trailers (id TEXT PRIMARY KEY, plate TEXT, type TEXT);
 CREATE TABLE IF NOT EXISTS fuel (id TEXT PRIMARY KEY, type TEXT, date TEXT, liters TEXT, cost TEXT, currency TEXT, station TEXT, tripId TEXT, trip TEXT);
-CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, tripId TEXT, trip TEXT, date TEXT, category TEXT, amount TEXT, currency TEXT, payment TEXT, note TEXT);
+CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, tripId TEXT, trip TEXT, date TEXT, operationType TEXT, category TEXT, amount TEXT, currency TEXT, payment TEXT, bankCard TEXT, note TEXT);
+CREATE TABLE IF NOT EXISTS bankCards (id TEXT PRIMARY KEY, name TEXT);
 CREATE TABLE IF NOT EXISTS route (id TEXT PRIMARY KEY, city TEXT, type TEXT, note TEXT, date TEXT);
 CREATE TABLE IF NOT EXISTS docs (id TEXT PRIMARY KEY, tripId TEXT, trip TEXT, type TEXT, name TEXT, note TEXT, data TEXT, mime TEXT);
 CREATE TABLE IF NOT EXISTS gps (id TEXT PRIMARY KEY, date TEXT, lat REAL, lon REAL, accuracy REAL);
@@ -43,7 +47,12 @@ def conn():
     c.execute('PRAGMA journal_mode=WAL')
     c.execute('PRAGMA foreign_keys=ON')
     c.executescript(SCHEMA)
+    # Миграция существующей базы без потери старых записей.
+    expense_cols = {row['name'] for row in c.execute('PRAGMA table_info(expenses)').fetchall()}
+    if 'operationType' not in expense_cols: c.execute('ALTER TABLE expenses ADD COLUMN operationType TEXT')
+    if 'bankCard' not in expense_cols: c.execute('ALTER TABLE expenses ADD COLUMN bankCard TEXT')
     c.execute("INSERT OR IGNORE INTO company(id,name,server) VALUES(1,'Моя транспортная компания','')")
+    c.commit()
     return c
 
 def auth(handler):
@@ -67,45 +76,70 @@ def get_state():
         for name, cols in TABLES.items():
             rows=c.execute('SELECT * FROM '+name).fetchall()
             state[name]=[row_to_dict(r) for r in rows]
+            if name == 'bankCards': state[name]=[r['name'] for r in rows]
         return state
     finally: c.close()
 
 def export_excel(state):
+    """Создаёт Excel-файл со всеми заголовками на русском языке."""
     try:
         from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill
+        from openpyxl.styles import Font, PatternFill, Alignment
         path = ROOT / 'data' / 'TruckControl_Отчёт.xlsx'
         path.parent.mkdir(parents=True, exist_ok=True)
         wb = Workbook()
         wb.remove(wb.active)
-        labels = {'trips':'Рейсы','drivers':'Водители','trucks':'Тягачи','trailers':'Прицепы','fuel':'Топливо','expenses':'Расходы','maintenance':'ТО','route':'Маршрут','docs':'Документы','gps':'GPS'}
-        for key, title in labels.items():
+        definitions = {
+            'trips': ('Рейсы', [('no','Номер рейса'),('date','Дата'),('from','Откуда'),('to','Куда'),('weight','Вес, т'),('status','Статус'),('startKm','Начальный пробег, км'),('endKm','Конечный пробег, км'),('mileage','Пробег за рейс, км'),('driver','Водитель'),('truck','Тягач'),('trailer','Прицеп')]),
+            'archiveTrips': ('Архив рейсов', [('no','Номер рейса'),('date','Дата'),('from','Откуда'),('to','Куда'),('weight','Вес, т'),('status','Статус'),('startKm','Начальный пробег, км'),('endKm','Конечный пробег, км'),('driver','Водитель'),('truck','Тягач'),('trailer','Прицеп'),('completedAt','Дата и время завершения'),('closedBy','Кем закрыт'),('report','Итоговый отчёт')]),
+            'drivers': ('Водители', [('name','ФИО водителя'),('phone','Телефон')]),
+            'trucks': ('Тягачи', [('plate','Государственный номер'),('model','Модель')]),
+            'trailers': ('Прицепы', [('plate','Государственный номер'),('type','Тип прицепа')]),
+            'fuel': ('Топливо', [('type','Вид топлива'),('date','Дата'),('liters','Количество, л'),('cost','Стоимость'),('currency','Валюта'),('station','Заправочная станция'),('trip','Номер рейса')]),
+            'expenses': ('Расходы', [('operationType','Тип операции'),('category','Категория'),('date','Дата'),('amount','Сумма'),('currency','Валюта'),('payment','Способ оплаты'),('bankCard','Банковская карта'),('trip','Номер рейса'),('note','Примечание')]),
+            'bankCards': ('Банковские карты', [('name','Название карты')]),
+            'maintenance': ('Техническое обслуживание', [('date','Дата'),('km','Пробег, км'),('truck','Тягач'),('type','Вид работ'),('note','Описание работ'),('cost','Стоимость')]),
+            'route': ('Маршрут', [('city','Населённый пункт'),('type','Тип точки'),('note','Примечание'),('date','Дата')]),
+            'docs': ('Документы', [('trip','Номер рейса'),('type','Тип документа'),('name','Название файла'),('note','Примечание'),('mime','Формат файла')]),
+            'gps': ('GPS', [('date','Дата и время'),('lat','Широта'),('lon','Долгота'),('accuracy','Точность, м')]),
+        }
+        for key, (title, fields) in definitions.items():
             ws = wb.create_sheet(title)
             rows = state.get(key, []) or []
-            if key == 'trips':
-                rows = [dict(row, **{'Километраж отчёта': max(0, float(row.get('endKm') or 0)-float(row.get('startKm') or 0))}) for row in rows]
-            cols = (['no','date','from','to','weight','status','startKm','endKm','Километраж отчёта','driver','truck','trailer'] if key == 'trips' else (list(dict.fromkeys(c for row in rows for c in row.keys() if c != 'data')) if rows else TABLES[key]))
-            ws.append(cols)
+            if key == 'bankCards': rows = [{'name': item} if isinstance(item, str) else item for item in rows]
+            ws.append([label for _, label in fields])
+            for row in rows:
+                values=[]
+                for field, _ in fields:
+                    value = row.get(field, '')
+                    if field == 'mileage':
+                        try: value=max(0,float(row.get('endKm') or 0)-float(row.get('startKm') or 0))
+                        except (TypeError, ValueError): value=0
+                    elif field == 'payment': value = 'Карта' if value == 'card' else ('Наличные' if value else '')
+                    elif field == 'operationType': value = 'Снятие наличных' if value == 'withdrawal' or row.get('category') == 'Снятие наличных' else 'Расход'
+                    elif field == 'type' and key == 'fuel': value = {'diesel':'Дизель','adblue':'AdBlue','antigel':'Антигель'}.get(value, value)
+                    values.append('' if value is None else str(value))
+                ws.append(values)
             for cell in ws[1]:
                 cell.font = Font(bold=True, color='FFFFFF')
                 cell.fill = PatternFill('solid', fgColor='0F4C5C')
-            for row in rows:
-                ws.append([str(row.get(c, '') if row.get(c) is not None else '') for c in cols])
+                cell.alignment = Alignment(wrap_text=True, vertical='center')
             ws.freeze_panes = 'A2'
             ws.auto_filter.ref = ws.dimensions
+            ws.row_dimensions[1].height = 30
             for column in ws.columns:
                 letter = column[0].column_letter
-                ws.column_dimensions[letter].width = min(max(max(len(str(c.value or '')) for c in column)+2, 12), 36)
-        # Summary worksheet with live-calculated mileage and totals
+                ws.column_dimensions[letter].width = min(max(max(len(str(c.value or '')) for c in column)+2, 14), 36)
         ws = wb.create_sheet('Сводка', 0)
         ws.append(['Показатель','Значение'])
         ws.append(['Всего пройдено, км', '=SUM(Рейсы!I:I)'])
-        ws.append(['Количество рейсов', '=COUNTA(Рейсы!A:A)-1'])
-        ws.append(['Всего заправок', '=COUNTA(Топливо!A:A)-1'])
-        ws.append(['Количество записей ТО', '=COUNTA(ТО!A:A)-1'])
-        for c in ws[1]:
-            c.font = Font(bold=True, color='FFFFFF'); c.fill = PatternFill('solid', fgColor='0F4C5C')
-        ws.column_dimensions['A'].width=28; ws.column_dimensions['B'].width=22
+        ws.append(['Количество актуальных рейсов', '=COUNTA(Рейсы!A:A)-1'])
+        ws.append(['Количество архивных рейсов', '=COUNTA(\'Архив рейсов\'!A:A)-1'])
+        ws.append(['Количество заправок', '=COUNTA(Топливо!A:A)-1'])
+        ws.append(['Количество записей расходов и снятия наличных', '=COUNTA(Расходы!A:A)-1'])
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color='FFFFFF'); cell.fill = PatternFill('solid', fgColor='0F4C5C')
+        ws.column_dimensions['A'].width=48; ws.column_dimensions['B'].width=24
         wb.save(path)
     except Exception as exc:
         print('Excel export skipped:', exc)
@@ -125,6 +159,7 @@ def replace_state(state):
             quoted_cols=','.join('"from"' if x=='from' else '"to"' if x=='to' else x for x in cols)
             sql=f'INSERT INTO {name} ({quoted_cols}) VALUES ({placeholders})'
             for item in state.get(name,[]) or []:
+                if name == 'bankCards' and isinstance(item, str): item={'id':item,'name':item}
                 vals=[clean(item.get(col)) for col in cols]
                 c.execute(sql, vals)
         c.commit()
